@@ -1,0 +1,13 @@
+{
+  "name": "warp-xray-generator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Генератор конфигов Xray для Cloudflare WARP с обфускацией",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}
