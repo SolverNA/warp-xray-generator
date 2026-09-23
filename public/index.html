@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#101418">
+<meta name="description" content="Генератор конфигов Xray для Cloudflare WARP с обфускацией: одноразовая ссылка-подписка живёт 5 минут.">
+<title>WARP + Xray: генератор конфига</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="wrap">
+
+  <header class="head">
+    <h1>WARP&nbsp;+&nbsp;Xray</h1>
+    <p class="lead">
+      Свежие креды Cloudflare WARP и конфиг Xray с обфускацией: перед рукопожатием
+      WireGuard уходит настоящий QUIC Initial и серия случайных пакетов, поэтому
+      поток не опознаётся как WireGuard.
+    </p>
+  </header>
+
+  <section class="notice" aria-label="О чём нужно знать заранее">
+    <p><strong>Ссылка живёт 5 минут.</strong> Это одноразовый канал доставки, а не
+      постоянная подписка: импортируйте конфиг сразу, иначе ссылку придётся
+      генерировать заново. Сам конфиг после импорта работает и дальше — умирает
+      только ссылка.</p>
+    <p><strong>Приватный ключ эти 5 минут лежит на сервере.</strong> Иначе клиент не
+      смог бы забрать конфиг по ссылке. Через 5 минут запись удаляется, но если
+      вам нужна полная приватность — генерируйте локально, ключ тогда не покидает
+      вашу машину:
+      <a href="https://github.com/SolverNA/awg-to-xray-warp" rel="noreferrer noopener">github.com/SolverNA/awg-to-xray-warp</a>.</p>
+  </section>
+
+  <details class="panel" id="settings">
+    <summary><span class="sum-title">Редактировать настройки</span><span class="sum-hint">необязательно — значения ниже проверены в бою</span></summary>
+
+    <div class="panel-body">
+
+      <fieldset>
+        <legend>Аккаунт WARP</legend>
+        <p class="fs-note">Заполняется после генерации. Можно вписать свои креды —
+          тогда регистрации в Cloudflare не будет.</p>
+
+        <label class="field">
+          <span class="lbl">Приватный ключ клиента</span>
+          <textarea id="f-privateKey" rows="2" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="выдаст Cloudflare при генерации"></textarea>
+        </label>
+
+        <label class="field">
+          <span class="lbl">Адреса интерфейса <span class="sub">через запятую; без маски подставится /32 и /128</span></span>
+          <textarea id="f-address" rows="2" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="172.16.0.2/32, 2606:4700:110:...:/128"></textarea>
+        </label>
+
+        <label class="field">
+          <span class="lbl">Публичный ключ пира</span>
+          <textarea id="f-peerPublicKey" rows="2" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+        </label>
+
+        <button type="button" class="ghost wide" id="btn-account">Зарегистрировать новый аккаунт WARP</button>
+      </fieldset>
+
+      <fieldset>
+        <legend>Туннель</legend>
+
+        <label class="field">
+          <span class="lbl">Endpoint <span class="sub">ХОСТ:ПОРТ, IPv6 — в квадратных скобках</span></span>
+          <input id="f-endpoint" type="text" inputmode="url" spellcheck="false" autocapitalize="off" autocorrect="off">
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span class="lbl">MTU</span>
+            <input id="f-mtu" type="number" inputmode="numeric" min="576" max="1500">
+          </label>
+          <label class="field">
+            <span class="lbl">keepAlive, с</span>
+            <input id="f-keepAlive" type="number" inputmode="numeric" min="0" max="120">
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="lbl">DNS <span class="sub">через запятую</span></span>
+          <textarea id="f-dns" rows="2" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span class="lbl">Имя профиля</span>
+            <input id="f-remarks" type="text" maxlength="40">
+          </label>
+          <label class="field">
+            <span class="lbl">Уровень лога</span>
+            <select id="f-loglevel">
+              <option value="none">none</option>
+              <option value="error">error</option>
+              <option value="warning">warning</option>
+              <option value="info">info</option>
+              <option value="debug">debug</option>
+            </select>
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Обфускация</legend>
+        <p class="fs-note">Отпечаток ClientHello зафиксирован и совпадает с браузерным;
+          меняются SNI, идентификаторы и ключи. Правьте с пониманием — значения по
+          умолчанию проверены на мобильных сетях.</p>
+
+        <label class="field">
+          <span class="lbl">SNI в поддельном QUIC Initial</span>
+          <span class="with-btn">
+            <input id="f-sni" type="text" spellcheck="false" autocapitalize="off" autocorrect="off">
+            <button type="button" class="mini" id="btn-sni" title="Выбрать другой SNI">Другой</button>
+          </span>
+        </label>
+
+        <div class="row">
+          <label class="field">
+            <span class="lbl">Размер QUIC-шума, байт</span>
+            <input id="f-quicSize" type="number" inputmode="numeric" min="64" max="1400">
+          </label>
+          <label class="field">
+            <span class="lbl">Задержка QUIC, мс</span>
+            <input id="f-quicDelay" type="text" inputmode="numeric" spellcheck="false" placeholder="1-2">
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="lbl">ALPN <span class="sub">через запятую</span></span>
+          <input id="f-alpn" type="text" spellcheck="false" autocapitalize="off" autocorrect="off">
+        </label>
+
+        <div class="row three">
+          <label class="field">
+            <span class="lbl">rand-шумов, шт</span>
+            <input id="f-randCount" type="number" inputmode="numeric" min="0" max="64">
+          </label>
+          <label class="field">
+            <span class="lbl">Размер rand</span>
+            <input id="f-randSize" type="text" spellcheck="false" placeholder="23-911">
+          </label>
+          <label class="field">
+            <span class="lbl">Задержка rand</span>
+            <input id="f-randDelay" type="text" spellcheck="false" placeholder="1-3">
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="lbl">QUIC Initial, hex <span class="sub">пусто — собирается заново на сервере</span></span>
+          <span class="with-btn">
+            <textarea id="f-quicPacket" rows="3" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="собирается автоматически"></textarea>
+            <button type="button" class="mini" id="btn-quic" title="Собрать новый пакет">Заново</button>
+          </span>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Локальные входящие</legend>
+        <label class="check">
+          <input id="f-inbounds" type="checkbox" checked>
+          <span>Добавить socks- и http-входящие <span class="sub">нужны десктопным ядрам; мобильные клиенты их игнорируют</span></span>
+        </label>
+        <div class="row three">
+          <label class="field">
+            <span class="lbl">listen</span>
+            <input id="f-listen" type="text" spellcheck="false" autocapitalize="off" autocorrect="off">
+          </label>
+          <label class="field">
+            <span class="lbl">socks-порт</span>
+            <input id="f-socksPort" type="number" inputmode="numeric" min="1" max="65535">
+          </label>
+          <label class="field">
+            <span class="lbl">http-порт</span>
+            <input id="f-httpPort" type="number" inputmode="numeric" min="1" max="65535">
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="panel-actions">
+        <button type="button" class="ghost" id="btn-apply">Применить настройки</button>
+        <button type="button" class="ghost" id="btn-refresh">Обновить конфиг</button>
+        <button type="button" class="ghost quiet" id="btn-reset">Вернуть значения по умолчанию</button>
+      </div>
+      <p class="fs-note">«Применить настройки» пересобирает конфиг на тех же кредах,
+        «Обновить конфиг» — перегенерирует все изменяемые креды разом: новый аккаунт
+        WARP, новый SNI, новый пакет шума.</p>
+    </div>
+  </details>
+
+  <div class="cta">
+    <button type="button" id="btn-generate" class="primary">Генерировать</button>
+    <p class="cta-note" id="cta-note">Регистрация в Cloudflare занимает пару секунд.</p>
+  </div>
+
+  <div id="status" class="status" hidden role="status" aria-live="polite"></div>
+
+  <section id="result" class="result" hidden>
+    <h2>Ссылка-подписка</h2>
+    <p class="url-box"><code id="out-url"></code></p>
+    <div class="btn-row">
+      <button type="button" class="primary small" id="btn-copy-url">Скопировать ссылку</button>
+      <button type="button" class="ghost small" id="btn-copy-json">Скопировать JSON конфига</button>
+    </div>
+
+    <div class="qr-wrap">
+      <div class="qr-card"><canvas id="qr" aria-label="QR-код со ссылкой-подпиской"></canvas></div>
+      <p class="qr-note">В QR-коде — <strong>ссылка</strong>, а не конфиг: конфиг в QR физически не влезает.</p>
+    </div>
+
+    <h3>Открыть в приложении</h3>
+    <div class="apps">
+      <a class="app" id="app-happ" href="#">Happ</a>
+      <a class="app" id="app-v2raytun" href="#">v2rayTun</a>
+      <a class="app" id="app-v2rayng" href="#">v2rayNG</a>
+      <button type="button" class="app app-btn" id="app-throne">Throne — скопировать ссылку</button>
+    </div>
+    <p class="apps-note">У Throne нет собственной URL-схемы, открыть его ссылкой невозможно:
+      скопируйте ссылку и добавьте её в приложении как подписку. Так же работает любой
+      клиент, которого нет в списке.</p>
+
+    <details class="panel json-panel">
+      <summary><span class="sum-title">JSON конфига</span><span class="sum-hint">для ручного импорта</span></summary>
+      <pre class="json" id="out-json"></pre>
+    </details>
+
+    <div class="life" id="life">
+      <div class="life-live" id="life-live">
+        <p class="life-title">Ссылка активна ещё <strong id="countdown">5:00</strong></p>
+        <div class="bar"><div class="bar-fill" id="bar-fill"></div></div>
+        <p class="life-note">Успейте импортировать. Время вышло — ссылка перестанет открываться.</p>
+      </div>
+      <div class="life-dead" id="life-dead" hidden>
+        <p class="life-title dead">Ссылка истекла — по ней уже ничего не отдаётся.</p>
+        <div class="btn-row">
+          <button type="button" class="primary small" id="btn-extend">Продлить ещё на 5 минут</button>
+          <button type="button" class="ghost small" id="btn-again">Сгенерировать заново</button>
+        </div>
+        <p class="life-note">«Продлить» оставит ту же ссылку и тот же QR — те же креды, новые 5 минут.
+          «Сгенерировать заново» даст новый аккаунт и новую ссылку.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="clients">
+    <h2>Какие клиенты подойдут</h2>
+    <p class="ok"><strong>Работают:</strong> v2rayNG, v2rayTun, Happ, Throne, Streisand, v2rayN —
+      всё, что внутри держит ядро Xray.</p>
+    <p class="bad"><strong>Не работают и работать не будут:</strong> Hiddify, sing-box
+      (SFA, SFI, SFM, SFT), Clash / mihomo / Stash, Karing.</p>
+    <p>Дело не в формате подписки. Обфускация здесь — это outbound <code>freedom</code>
+      с полем <code>noises</code>, такой концепции в этих ядрах нет вообще, и
+      воспроизвести профиль нечем. Отдать им конфиг без шумов было бы хуже молчания:
+      он подключается, но на мобильной сети поток режется сразу, а причина не видна.
+      Поэтому таким клиентам по ссылке приходит текст с объяснением, а не конфиг.</p>
+  </section>
+
+  <footer class="foot">
+    <p>Конфиг собирается на сервере: регистрация в Cloudflare из браузера невозможна
+      из-за CORS, а клиенту нужна ссылка, по которой он заберёт готовый JSON.</p>
+    <p><a href="https://github.com/SolverNA/awg-to-xray-warp" rel="noreferrer noopener">Исходная
+      схема обфускации и локальный генератор</a> · QR-код рисует библиотека Project Nayuki (MIT),
+      она лежит файлом рядом, как и всё остальное на этой странице.</p>
+  </footer>
+
+</main>
+
+<script src="qrcodegen.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
