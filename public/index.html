@@ -71,13 +71,23 @@
         </label>
 
         <div class="field">
-          <span class="lbl">Версия IP <span class="sub">по умолчанию только IPv4 — адреса другой версии в конфиг не попадут</span></span>
+          <span class="lbl">Версия IP <span class="sub">по умолчанию обе — это профиль, проверенный в бою</span></span>
           <div class="seg" role="radiogroup" aria-label="Версия IP">
             <label><input type="radio" name="ipVersion" value="both"><span>IPv4 + IPv6</span></label>
             <label><input type="radio" name="ipVersion" value="ipv4"><span>Только IPv4</span></label>
             <label><input type="radio" name="ipVersion" value="ipv6"><span>Только IPv6</span></label>
           </div>
         </div>
+
+        <label class="field">
+          <span class="lbl">DNS queryStrategy <span class="sub">по умолчанию не задаётся: в проверенном профиле этого поля нет, а с ним конфиг может не работать</span></span>
+          <select id="f-queryStrategy">
+            <option value="">не задавать</option>
+            <option value="UseIP">UseIP</option>
+            <option value="UseIPv4">UseIPv4</option>
+            <option value="UseIPv6">UseIPv6</option>
+          </select>
+        </label>
 
         <div class="row">
           <label class="field">

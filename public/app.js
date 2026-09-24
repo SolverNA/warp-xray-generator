@@ -17,7 +17,8 @@ var DEFAULTS = {
   mtu: 1280,
   keepAlive: 5,
   dns: '1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001',
-  ipVersion: 'ipv4',
+  ipVersion: 'both',
+  queryStrategy: '',
   loglevel: 'warning',
   remarks: 'WARP',
   alpn: 'h3',
@@ -293,6 +294,7 @@ function applyDefaults() {
   fill('f-keepAlive', DEFAULTS.keepAlive);
   fill('f-dns', DEFAULTS.dns);
   setIpVersion(DEFAULTS.ipVersion);
+  $('f-queryStrategy').value = DEFAULTS.queryStrategy;
   fill('f-remarks', DEFAULTS.remarks);
   $('f-loglevel').value = DEFAULTS.loglevel;
   fill('f-alpn', DEFAULTS.alpn);
@@ -317,6 +319,7 @@ function collectBody(opts) {
     keepAlive: numOr('f-keepAlive'),
     dns: listOr('f-dns'),
     ipVersion: getIpVersion(),
+    queryStrategy: strOr('f-queryStrategy') || null,
     loglevel: strOr('f-loglevel'),
     remarks: strOr('f-remarks'),
     sni: strOr('f-sni'),
@@ -360,6 +363,7 @@ function fillFromResponse(data) {
   fill('f-keepAlive', p.keepAlive);
   fill('f-dns', p.dns);
   setIpVersion(p.ipVersion);
+  $('f-queryStrategy').value = p.queryStrategy || '';
   fill('f-remarks', p.remarks);
   if (p.loglevel) $('f-loglevel').value = p.loglevel;
   fill('f-sni', p.sni);
