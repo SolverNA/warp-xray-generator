@@ -159,6 +159,18 @@ input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-
 .with-btn { display: flex; gap: 8px; align-items: flex-start; }
 .with-btn > :first-child { flex: 1 1 auto; }
 
+.seg { display: flex; gap: 6px; background: var(--bg-input); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px; }
+.seg label { flex: 1 1 0; position: relative; margin: 0; }
+.seg input { position: absolute; opacity: 0; width: 0; height: 0; }
+.seg span {
+  display: block; text-align: center; padding: 10px 4px; border-radius: calc(var(--radius) - 5px);
+  font-size: .86rem; color: var(--fg-dim); cursor: pointer; user-select: none;
+  border: 1px solid transparent; transition: background .12s, color .12s;
+}
+.seg input:checked + span { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.seg input:focus-visible + span { border-color: var(--fg); }
+@media (max-width: 360px) { .seg { flex-wrap: wrap; } .seg label { flex: 1 1 100%; } }
+
 .check { display: flex; gap: 10px; align-items: flex-start; margin: 4px 0 14px; font-size: .92rem; color: var(--fg-dim); }
 .check input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--accent); flex: none; }
 

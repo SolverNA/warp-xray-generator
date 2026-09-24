@@ -17,6 +17,7 @@ var DEFAULTS = {
   mtu: 1280,
   keepAlive: 5,
   dns: '1.1.1.1, 1.0.0.1, 2606:4700:4700::1111, 2606:4700:4700::1001',
+  ipVersion: 'ipv4',
   loglevel: 'warning',
   remarks: 'WARP',
   alpn: 'h3',
@@ -81,6 +82,18 @@ function listOr(id) {
   if (!v) return undefined;
   var out = v.split(/[,\s]+/).map(function (s) { return s.trim(); }).filter(Boolean);
   return out.length ? out : undefined;
+}
+
+/** Выбранная версия IP; если ничего не отмечено — значение по умолчанию. */
+function getIpVersion() {
+  var checked = document.querySelector('input[name="ipVersion"]:checked');
+  return checked ? checked.value : DEFAULTS.ipVersion;
+}
+
+function setIpVersion(value) {
+  var want = value || DEFAULTS.ipVersion;
+  var boxes = document.querySelectorAll('input[name="ipVersion"]');
+  for (var i = 0; i < boxes.length; i += 1) boxes[i].checked = (boxes[i].value === want);
 }
 
 function fill(id, value) {
@@ -279,6 +292,7 @@ function applyDefaults() {
   fill('f-mtu', DEFAULTS.mtu);
   fill('f-keepAlive', DEFAULTS.keepAlive);
   fill('f-dns', DEFAULTS.dns);
+  setIpVersion(DEFAULTS.ipVersion);
   fill('f-remarks', DEFAULTS.remarks);
   $('f-loglevel').value = DEFAULTS.loglevel;
   fill('f-alpn', DEFAULTS.alpn);
@@ -302,6 +316,7 @@ function collectBody(opts) {
     mtu: numOr('f-mtu'),
     keepAlive: numOr('f-keepAlive'),
     dns: listOr('f-dns'),
+    ipVersion: getIpVersion(),
     loglevel: strOr('f-loglevel'),
     remarks: strOr('f-remarks'),
     sni: strOr('f-sni'),
@@ -344,6 +359,7 @@ function fillFromResponse(data) {
   fill('f-mtu', p.mtu);
   fill('f-keepAlive', p.keepAlive);
   fill('f-dns', p.dns);
+  setIpVersion(p.ipVersion);
   fill('f-remarks', p.remarks);
   if (p.loglevel) $('f-loglevel').value = p.loglevel;
   fill('f-sni', p.sni);

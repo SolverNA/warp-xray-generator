@@ -10,13 +10,13 @@
  * Тело (всё необязательно):
  *   account   {privateKey, address[], peerPublicKey}  переиспользовать аккаунт
  *   id        существующий идентификатор — ссылка остаётся прежней (TTL заново)
- *   endpoint, mtu, keepAlive, dns[], loglevel, reserved
+ *   endpoint, mtu, keepAlive, dns[], ipVersion, loglevel, reserved
  *   sni, alpn[], quicSize, quicDelay, randCount, randSize, randDelay
  *   quicPacket  готовый hex QUIC Initial (ручная правка; иначе генерируется)
  *   remarks, inbounds, listen, socksPort, httpPort
  */
 
-import { buildConfig, buildNoises, DEF_ALPN, DEF_ENDPOINT, DEF_KEEPALIVE, DEF_LOGLEVEL,
+import { buildConfig, buildNoises, DEF_ALPN, DEF_ENDPOINT, DEF_IP_VERSION, DEF_KEEPALIVE, DEF_LOGLEVEL,
   DEF_MTU, DEF_QUIC_DELAY, DEF_QUIC_SIZE, DEF_RAND_COUNT, DEF_RAND_DELAY, DEF_RAND_SIZE,
   DEF_DNS } from '../lib/build-config.js';
 import { isValidId, newId, put, TTL_SECONDS, isPersistent } from '../lib/store.js';
@@ -107,6 +107,7 @@ export default async function handler(req, res) {
     mtu: body.mtu ?? DEF_MTU,
     keepAlive: body.keepAlive ?? DEF_KEEPALIVE,
     dns: body.dns ?? DEF_DNS,
+    ipVersion: body.ipVersion ?? DEF_IP_VERSION,
     loglevel: body.loglevel ?? DEF_LOGLEVEL,
     remarks: body.remarks ?? 'WARP',
     inbounds: body.inbounds ?? true,
@@ -133,6 +134,7 @@ export default async function handler(req, res) {
       mtu: params.mtu,
       keepAlive: params.keepAlive,
       dns: params.dns,
+      ipVersion: params.ipVersion,
       loglevel: params.loglevel,
       noises: noiseInfo.noises,
       reserved: body.reserved ?? null,

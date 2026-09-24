@@ -33,7 +33,10 @@ test('в конфиге есть все обязательные для клие
 });
 
 test('wireguard-аутбаунд повторяет проверенный в бою профиль', () => {
-  const [warp, noiseOut] = make().outbounds;
+  // Полевые прогоны шли с обеими версиями IP, поэтому профиль сверяется
+  // именно с ipVersion: 'both'. Умолчание теперь другое ('ipv4') — это
+  // сознательное отступление ради удобства, а не изменение эталона.
+  const [warp, noiseOut] = make({ config: { ipVersion: 'both' } }).outbounds;
   assert.equal(warp.tag, 'warp');
   assert.equal(warp.protocol, 'wireguard');
   assert.equal(warp.settings.mtu, DEF_MTU);
@@ -147,4 +150,62 @@ test('validHostname следует RFC 1123', () => {
   assert.equal(validHostname('a'.repeat(64) + '.com'), false);
   assert.equal(validHostname('под_чёрк.com'), false);
   assert.equal(validHostname(''), false);
+});
+
+// --- версия IP -------------------------------------------------------------
+
+test('по умолчанию в конфиге остаётся только IPv4', () => {
+  const cfg = make();
+  const wg = cfg.outbounds.find((o) => o.protocol === 'wireguard');
+  assert.deepEqual(wg.settings.address, ['172.16.0.2/32']);
+  assert.deepEqual(wg.settings.peers[0].allowedIPs, ['0.0.0.0/0']);
+  assert.deepEqual(cfg.dns.servers, ['1.1.1.1', '1.0.0.1']);
+  assert.equal(cfg.dns.queryStrategy, 'UseIPv4');
+});
+
+test('режим «только IPv6» оставляет одни v6-адреса', () => {
+  const cfg = make({ config: { ipVersion: 'ipv6' } });
+  const wg = cfg.outbounds.find((o) => o.protocol === 'wireguard');
+  assert.deepEqual(wg.settings.address, ['2606:4700:110:8798:f77d:7e3b:a4ad:2943/128']);
+  assert.deepEqual(wg.settings.peers[0].allowedIPs, ['::/0']);
+  assert.deepEqual(cfg.dns.servers, ['2606:4700:4700::1111', '2606:4700:4700::1001']);
+  assert.equal(cfg.dns.queryStrategy, 'UseIPv6');
+});
+
+test('режим «обе версии» сохраняет всё, как было до появления переключателя', () => {
+  const cfg = make({ config: { ipVersion: 'both' } });
+  const wg = cfg.outbounds.find((o) => o.protocol === 'wireguard');
+  assert.equal(wg.settings.address.length, 2);
+  assert.deepEqual(wg.settings.peers[0].allowedIPs, ['0.0.0.0/0', '::/0']);
+  assert.equal(cfg.dns.servers.length, 4);
+  assert.equal(cfg.dns.queryStrategy, 'UseIP');
+});
+
+test('queryStrategy — единственное значение версии, которое Xray понимает', () => {
+  // ForceIPv4 / ForceIPv6 в бинарнике Xray 26.3.27 отсутствуют совсем,
+  // поэтому domainStrategy у wireguard-аутбаунда мы намеренно не трогаем.
+  for (const v of ['both', 'ipv4', 'ipv6']) {
+    const cfg = make({ config: { ipVersion: v } });
+    const wg = cfg.outbounds.find((o) => o.protocol === 'wireguard');
+    assert.ok(!('domainStrategy' in wg.settings), 'domainStrategy не должен появляться у wireguard');
+    assert.ok(['UseIP', 'UseIPv4', 'UseIPv6'].includes(cfg.dns.queryStrategy));
+  }
+});
+
+test('просьба об IPv6, которого у аккаунта нет, даёт внятную ошибку', () => {
+  assert.throws(
+    () => buildConfig({
+      ...CREDS, address: ['172.16.0.2'], noises: buildNoises({}).noises, ipVersion: 'ipv6',
+    }),
+    /только IPv6.*нет ни одного IPv6/s,
+  );
+});
+
+test('недопустимое значение ipVersion отвергается, а не игнорируется', () => {
+  assert.throws(() => make({ config: { ipVersion: 'ipv5' } }), /недопустимый ipVersion/);
+});
+
+test('DNS-записи, которые не являются адресами, переживают фильтрацию', () => {
+  const cfg = make({ config: { ipVersion: 'ipv4', dns: ['1.1.1.1', 'localhost', '2606:4700:4700::1111'] } });
+  assert.deepEqual(cfg.dns.servers, ['1.1.1.1', 'localhost']);
 });
